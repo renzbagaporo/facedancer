@@ -5,6 +5,7 @@
 """ Emulation of an FTDI USB-to-serial converter. """
 
 import asyncio
+import struct
 
 from enum   import IntFlag
 from typing import Union
@@ -15,9 +16,8 @@ from ..classes import USBDeviceClass
 
 from ..logging import log
 
-
-OUT_ENDPOINT = 1
-IN_ENDPOINT  = 3
+OUT_ENDPOINT = 2
+IN_ENDPOINT  = 1
 
 
 class FTDIFlowControl(IntFlag):
@@ -34,11 +34,23 @@ class FTDIDevice(USBDevice):
 
     vendor_id           : int = 0x0403
     product_id          : int = 0x6001
-    device_revision     : int = 1
+    device_revision     : int = 0x0600
+    serial_number       : str = "FT123450"
 
-    product_string      : str = "FTDI emulation"
-    manufacturer_string : str = "not-FTDI"
+    manufacturer_string      : StringRef = StringRef.field(string="not-FTDI")
+    product_string           : StringRef = StringRef.field(string="FTDI emulation")
+    serial_number_string     : StringRef = StringRef.field(string=serial_number)
 
+    eeprom_data = [
+        0x0440, 0x2A18, 0x0148, 0x0006, 0x802D, 0x0800, 0x0002, 0x1812,
+        0x2A20, 0x4812, 0x0000, 0x0000, 0x1203, 0x6E00, 0x6F00, 0x7400,
+        0x2D00, 0x4600, 0x5400, 0x4400, 0x4900, 0x1E03, 0x4600, 0x5400,
+        0x4400, 0x4900, 0x2000, 0x6500, 0x6D00, 0x7500, 0x6C00, 0x6100,
+        0x7400, 0x6900, 0x6F00, 0x6E00, 0x1203, 0x4600, 0x5400, 0x3100,
+        0x3200, 0x3300, 0x3400, 0x3500, 0x3000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+        0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x6125
+    ]
 
     class _Configuration(USBConfiguration):
         configuration_string : str = "FTDI config"
@@ -63,6 +75,8 @@ class FTDIDevice(USBDevice):
 
     def __post_init__(self):
         super().__post_init__()
+        # FTDI Windows driver reads serial number descriptor after reading the EEPROM for verification
+        self.strings.add_string(self.serial_number, index=3)
         self.reset_ftdi()
 
 
@@ -146,8 +160,8 @@ class FTDIDevice(USBDevice):
         """ Control request to set our baud rate. """
 
         if request.value > 9:
-            log.warning("Host specified an unknown baud rate value. Stalling.")
-            request.stall()
+            log.warning("Host specified an unknown baud rate value.")
+            request.acknowledge()
             return
 
         # For most values, the FTDI device uses the value to set the baud divisor,
@@ -210,6 +224,24 @@ class FTDIDevice(USBDevice):
         # Per Travis Goodspeed, this is a "bullshit value".
         request.reply(b'\x01')
 
+    @vendor_request_handler(number=144)
+    def handle_control_request_144(self, request):
+        log.info(f"received read_eeprom request at index {request.index}")
+
+        if 0 <= request.index < len(self.eeprom_data):
+            data_word = self.eeprom_data[request.index]
+            response_bytes = struct.pack('>H', data_word)
+            request.reply(response_bytes)
+            log.debug(f"Handled EEPROM read at index {request.index}: sent {response_bytes.hex()}")
+        elif request.index == 66:
+            request.reply(struct.pack('>H', 0x0000))
+            log.debug(f"Handled EEPROM read at index {request.index}: sent 0000")
+        elif request.index < 128:
+            request.reply(struct.pack('>H', 0xFFFF))
+            log.debug(f"Handled EEPROM read at index {request.index}: sent FFFF")
+        else:
+            request.stall()
+            log.info(f"EEPROM read at out-of-bounds index {request.index}: stalled")
 
     #
     # Internal event handlers.
