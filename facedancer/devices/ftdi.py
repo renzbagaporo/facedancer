@@ -225,7 +225,7 @@ class FTDIDevice(USBDevice):
         request.reply(b'\x01')
 
     @vendor_request_handler(number=144)
-    def handle_control_request_144(self, request):
+    def handle_read_eeprom_request(self, request):
         log.info(f"received read_eeprom request at index {request.index}")
 
         if 0 <= request.index < len(self.eeprom_data):
