@@ -9,13 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
-## [3.1.1] - 2025-08-01
+## [3.1.2] - 2025-12-05
+### Fixed
+* FTDI emulation stopped working with recent Windows releases. (tx @gniezen!)
+### Added
+* Added a usbproxy filter for logging high-level HID requests. (tx @akvadrako!)
+### Security
+* Updated `jinja2` from 3.1.5 to 3.1.6.
 
+## [3.1.1] - 2025-08-01
 ### Added
 * Hydradancer: Handle `clear_halt` (tx @kauwua!)
 * Add `parent` field to all descriptors. (tx @kauwua!)
 * Extend mass storage device constructor to be more configurable. (tx @gniezen!)
-
 ### Fixed
 * Mass storage device was unable to use custom descriptors. (tx @gniezen!)
 
@@ -44,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 * Round-trip support for creating Facedancer devices, configurations, interfaces, endpoints and descriptors from binary data to objects, to code, to objects and back to binary data.
 * New backend method: `validate_configuration` for rejecting USB device configurations that are not supported by a given backend.
-
 
 
 ## [3.0.6] - 2024-11-27
@@ -129,7 +134,8 @@ Any future bug-fixes or backports to Facedancer `2.9.x` should use the [`v2.9.x 
 - The current Facedancer core will be supersed by the implementation in `future/` with the `v3.0` release.
 
 
-[Unreleased]: https://github.com/greatscottgadgets/facedancer/compare/3.1.1...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/facedancer/compare/3.1.2...HEAD
+[3.1.2]: https://github.com/greatscottgadgets/facedancer/compare/3.1.1...3.1.2
 [3.1.1]: https://github.com/greatscottgadgets/facedancer/compare/3.1.0...3.1.1
 [3.1.0]: https://github.com/greatscottgadgets/facedancer/compare/3.0.6...3.1.0
 [3.0.6]: https://github.com/greatscottgadgets/facedancer/compare/3.0.5...3.0.6
