@@ -18,11 +18,26 @@ from ...descriptor import USBDescriptor, USBDescriptorTypeNumber
 
 def _hid_item_generator(constant) -> Tuple[int]:
     """ Generates a HID descriptor global item entry. """
-
+    # See See HID1.1 [6.2.2.1 Items Types and Tags]
+    size_code_map = {
+        0: 0b00,  # No data
+        1: 0b01,  # 1 byte
+        2: 0b10,  # 2 bytes
+        4: 0b11,  # 4 bytes
+    }
     # Generate a function that creates a item with
     # the relevant type...
     def hid_item(*octets):
-        return (constant | len(octets), *octets)
+        size = len(octets)
+        if size not in size_code_map:
+            raise ValueError(
+                f"HID short item can only have 0, 1, 2 or 4 data bytes, got {size}"
+            )
+
+        size_code = size_code_map[size]
+        prefix = constant | size_code
+
+        return (prefix, *octets)
 
     # ... and return it.
     return hid_item
