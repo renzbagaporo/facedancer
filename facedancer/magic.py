@@ -4,22 +4,41 @@
 """ Functionally for automatic instantiations / tracking via decorators. """
 
 import inspect
+import sys
 
 from abc         import ABCMeta, abstractmethod
 from dataclasses import dataclass, is_dataclass, field, fields
 
-
 class DescribableMeta(ABCMeta):
     """ Metaclass for USBDescribable subclasses. """
-    def __new__(cls, name, bases, classdict):
-        annotations = classdict.setdefault('__annotations__', {})
-        for base in bases:
-            if is_dataclass(base):
-                for field in fields(base):
-                    if field.name in classdict:
-                        if field.name not in annotations:
-                            annotations[field.name] = str(field.type)
-        new_cls = ABCMeta.__new__(cls, name, bases, classdict)
+    def __new__(cls, name, bases, ns):
+        """ Construct a new dataclass from the given class which
+            inherits all type annotations from its base classes. """
+
+        # Get annotations for the current class namespace.
+        if "__annotations__" in ns:
+            annotations = ns["__annotations__"]
+        elif sys.version_info >= (3, 14):
+            # See: https://peps.python.org/pep-0749/#annotations-and-metaclasses
+            import annotationlib
+            if annotate := annotationlib.get_annotate_from_class_namespace(ns):
+                annotations = annotationlib.call_annotate_function(
+                    annotate,
+                    annotationlib.Format.FORWARDREF
+                )
+            else:
+                annotations = ns.setdefault('__annotations__', {})
+        else:
+            annotations = ns.setdefault('__annotations__', {})
+
+        # For every field, of every base class, if our current class
+        # namespace does not have an annotation for it, add one.
+        for base in filter(is_dataclass, bases):
+            for field in fields(base):
+                if field.name in ns and field.name not in annotations:
+                    annotations[field.name] = str(field.type)
+
+        new_cls = ABCMeta.__new__(cls, name, bases, ns)
         return dataclass(new_cls, kw_only=True)
 
 

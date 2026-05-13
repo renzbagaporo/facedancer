@@ -1,7 +1,4 @@
-import os, pkg_resources, sys, time
-sys.path.insert(0, os.path.abspath("../../"))
-sys.path.insert(0, os.path.abspath('../../facedancer'))
-
+import time
 import sphinx_rtd_theme
 
 extensions = [
@@ -12,9 +9,9 @@ extensions = [
 
 project = 'Facedancer'
 copyright = time.strftime('2018-%Y, Great Scott Gadgets')
-author = 'Great Scott Gadget'
+author = 'Great Scott Gadgets'
 
-version = pkg_resources.get_distribution('facedancer').version
+version = ''
 release = ''
 
 
